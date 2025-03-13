@@ -17,7 +17,7 @@ df = pd.DataFrame(dataset['data'], columns=columns)
 print("Dataset preview:")
 print(df.shape)
 print(df.head())
-print(df.iloc[:, -1].value_counts())
+# print(df.iloc[:, -1].value_counts())
 
 # --- Step 2: Define a Custom PyTorch Dataset ---
 class EEGDataset(Dataset):
@@ -39,15 +39,15 @@ class EEGDataset(Dataset):
         return sample, label
 
 # --- Step 3: Split the Data into Training and Testing Sets ---
-train_df, test_df = train_test_split(df, test_size=0.2, random_state=42, stratify=df.iloc[:, -1])
+train_df, test_df = train_test_split(df, test_size=0.2, random_state=40, stratify=df.iloc[:, -1])
 print("Training set size:", len(train_df))
 print("Testing set size:", len(test_df))
 
 # Create Dataset instances for train and test sets
 train_dataset = EEGDataset(train_df)
 test_dataset = EEGDataset(test_df)
-print(train_df.iloc[:, -1].value_counts())
-print(test_df.iloc[:, -1].value_counts())
+# print(train_df.iloc[:, -1].value_counts())
+# print(test_df.iloc[:, -1].value_counts())
 # --- Step 4: Create DataLoaders ---
 batch_size = 64
 

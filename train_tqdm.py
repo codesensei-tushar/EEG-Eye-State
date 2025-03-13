@@ -1,5 +1,5 @@
 import torch
-from tqdm import tqdm
+from tqdm import tqdm  # Progress bar for better visualization
 
 def train_model(model, train_loader, criterion, optimizer, device, num_epochs=20):
     model.train()  # Set model to training mode
@@ -8,21 +8,22 @@ def train_model(model, train_loader, criterion, optimizer, device, num_epochs=20
         correct = 0
         total = 0
         
-        for data, target in train_loader:
-            # Move data to the chosen device (CPU/GPU)
-            data, target = data.to(device), target.to(device)
+        # Use tqdm to monitor progress per epoch
+        for data, target in tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs}", leave=False):
+            # Move data to the device with non_blocking=True (if pin_memory=True)
+            data, target = data.to(device, non_blocking=True), target.to(device, non_blocking=True)
             
             optimizer.zero_grad()  # Reset gradients
             
             outputs = model(data)  # Forward pass
             loss = criterion(outputs, target)  # Compute loss
             
-            loss.backward()  # Backward pass (compute gradients)
+            loss.backward()  # Backward pass
             optimizer.step()  # Update weights
             
             running_loss += loss.item() * data.size(0)
             
-            # Calculate accuracy for this batch
+            # Compute batch accuracy
             _, predicted = torch.max(outputs, 1)
             total += target.size(0)
             correct += (predicted == target).sum().item()
@@ -34,16 +35,15 @@ def train_model(model, train_loader, criterion, optimizer, device, num_epochs=20
     
     return model
 
-# Evaluation function
 def evaluate_model(model, test_loader, criterion, device):
     model.eval()  # Set model to evaluation mode
     running_loss = 0.0
     correct = 0
     total = 0
     
-    with torch.no_grad():  # No need to compute gradients during evaluation
+    with torch.no_grad():  # No gradients during evaluation
         for data, target in test_loader:
-            data, target = data.to(device), target.to(device)
+            data, target = data.to(device, non_blocking=True), target.to(device, non_blocking=True)
             outputs = model(data)
             loss = criterion(outputs, target)
             running_loss += loss.item() * data.size(0)
