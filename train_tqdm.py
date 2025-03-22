@@ -1,8 +1,11 @@
 import torch
 from tqdm import tqdm  # Progress bar for better visualization
 
-def train_model(model, train_loader, criterion, optimizer, device, num_epochs=20):
+def train_model(model, train_loader,val_loader, criterion, optimizer, device, num_epochs=20):
     model.train()  # Set model to training mode
+    train_losses = []
+    train_accuracies = []
+    val_accuracies = []
     for epoch in range(num_epochs):
         running_loss = 0.0
         correct = 0
@@ -30,10 +33,15 @@ def train_model(model, train_loader, criterion, optimizer, device, num_epochs=20
         
         epoch_loss = running_loss / total
         epoch_acc = correct / total
-        
+        train_losses.append(epoch_loss)
+        train_accuracies.append(epoch_acc)
+
+        val_acc = evaluate_model(model, val_loader, criterion, device)
+        val_accuracies.append(val_acc)
+
         print(f"Epoch {epoch+1}/{num_epochs} - Loss: {epoch_loss:.4f}, Accuracy: {epoch_acc:.4f}")
     
-    return model
+    return model, train_losses, train_accuracies ,val_accuracies
 
 def evaluate_model(model, test_loader, criterion, device):
     model.eval()  # Set model to evaluation mode
@@ -55,3 +63,4 @@ def evaluate_model(model, test_loader, criterion, device):
     epoch_loss = running_loss / total
     epoch_acc = correct / total
     print(f"Test Loss: {epoch_loss:.4f}, Test Accuracy: {epoch_acc:.4f}")
+    return epoch_acc

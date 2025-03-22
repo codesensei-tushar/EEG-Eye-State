@@ -128,3 +128,75 @@ class ResidualMLP(nn.Module):
         # Final classification layer (no softmax needed with CrossEntropyLoss)
         out = self.fc_out(out)
         return out
+    
+class ResidualBlock(nn.Module):
+    def __init__(self, in_features, hidden_features, dropout=0.1):
+        super(ResidualBlock, self).__init__()
+        self.fc1 = nn.Linear(in_features, hidden_features)
+        self.ln1 = nn.LayerNorm(hidden_features)
+        self.fc2 = nn.Linear(hidden_features, in_features)
+        self.ln2 = nn.LayerNorm(in_features)
+        self.dropout = nn.Dropout(dropout)
+        
+    def forward(self, x):
+        residual = x
+        out = self.fc1(x)
+        out = self.ln1(out)
+        out = F.selu(out)
+        out = self.dropout(out)
+        out = self.fc2(out)
+        out = self.ln2(out)
+        out = F.selu(out)
+        out = self.dropout(out)
+        return out + residual
+
+class RobustEEGClassifier(nn.Module):
+    def __init__(self, input_dim=14, hidden_dim=128, num_classes=2, num_blocks=3, dropout=0.1):
+        super(RobustEEGClassifier, self).__init__()
+        # Initial projection from input to hidden_dim space.
+        self.fc_in = nn.Linear(input_dim, hidden_dim)
+        self.ln_in = nn.LayerNorm(hidden_dim)
+        self.dropout = nn.Dropout(dropout)
+        # Stack several residual blocks for deeper representation.
+        self.blocks = nn.Sequential(*[
+            ResidualBlock(hidden_dim, hidden_features=hidden_dim//2, dropout=dropout)
+            for _ in range(num_blocks)
+        ])
+        # Final classification layer.
+        self.fc_out = nn.Linear(hidden_dim, num_classes)
+    
+    def forward(self, x):
+        # x shape: (batch_size, 14)
+        x = self.fc_in(x)
+        x = self.ln_in(x)
+        x = F.selu(x)
+        x = self.dropout(x)
+        x = self.blocks(x)
+        x = self.fc_out(x)
+        return x
+    
+class EEG_LSTM(nn.Module):
+    def __init__(self, input_dim=14, hidden_dim=64, num_classes=2, num_layers=2, dropout=0.5):
+        super(EEG_LSTM, self).__init__()
+        self.hidden_dim = hidden_dim
+        self.num_layers = num_layers
+
+        # LSTM layer
+        self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers, batch_first=True, dropout=dropout)
+
+        # Fully connected layer
+        self.fc = nn.Linear(hidden_dim, num_classes)
+
+    def forward(self, x):
+        # LSTM expects input of shape (batch, sequence_length, input_dim)
+        x = x.unsqueeze(1)  # Adding sequence dimension: (batch_size, 1, input_dim)
+
+        # Get LSTM outputs
+        out, _ = self.lstm(x)
+
+        # Extract last time step output
+        out = out[:, -1, :]  # (batch_size, hidden_dim)
+
+        # Fully connected output layer
+        out = self.fc(out)
+        return out
